@@ -1,0 +1,424 @@
+# ============================================
+# Automated Assay Analysis - .gitignore
+# ============================================
+
+# ============================================
+# PYTHON / BACKEND
+# ============================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# Scrapy stuff
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ============================================
+# NODE / FRONTEND
+# ============================================
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production builds
+/build
+/dist
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js (if you ever switch)
+.next/
+out/
+
+# Nuxt.js (if you ever switch)
+.nuxt
+
+# Gatsby files (if you ever switch)
+.cache/
+public
+
+# ============================================
+# ENVIRONMENT & SECRETS
+# ============================================
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Secret keys and credentials
+*.pem
+*.key
+*.crt
+*.p12
+secrets.yml
+secrets.json
+credentials.json
+
+# ============================================
+# DATA FILES
+# ============================================
+
+# CSV data files (keep examples)
+data/*.csv
+data/*.txt
+data/*.xlsx
+data/*.xls
+!data/.gitkeep
+!data/README.md
+!data/example.csv
+
+# Uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Large files
+*.hdf5
+*.h5
+*.pkl
+*.pickle
+*.rds
+*.rda
+
+# ============================================
+# IDE / EDITORS
+# ============================================
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# NetBeans
+nbproject/
+
+# ============================================
+# OPERATING SYSTEM
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# ============================================
+# DOCKER
+# ============================================
+
+# Docker files (keep Dockerfile and docker-compose.yml)
+.dockerignore
+docker-compose.override.yml
+*.log
+
+# ============================================
+# DEPLOYMENT
+# ============================================
+
+# Heroku
+.heroku/
+
+# Vercel
+.vercel
+
+# AWS
+.aws-sam/
+.chalice/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ============================================
+# LOGS
+# ============================================
+
+# Application logs
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================================
+# TEMPORARY FILES
+# ============================================
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Lock files (optional - some prefer to commit these)
+package-lock.json
+yarn.lock
+poetry.lock
+
+# ============================================
+# TESTING & CI/CD
+# ============================================
+
+# Test results
+test-results/
+junit.xml
+test-output/
+
+# Coverage reports
+.nyc_output/
+coverage/
+*.lcov
+
+# Benchmark results
+benchmark/
+
+# ============================================
+# DOCUMENTATION
+# ============================================
+
+# Generated documentation
+docs/_build/
+docs/api/_autosummary/
+site/
+
+# ============================================
+# MISC
+# ============================================
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# SSL certificates (never commit these!)
+*.crt
+*.pem
+*.key
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# ============================================
+# PROJECT-SPECIFIC
+# ============================================
+
+# Analysis results (too large for git)
+results/
+output/
+reports/*.html
+reports/*.pdf
+
+# Model files (if you add ML models later)
+models/*.pkl
+models/*.h5
+models/*.pt
+*.model
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# ============================================
+# KEEP THESE FILES
+# ============================================
+# To keep empty directories, add .gitkeep files
+# To document structure, add README.md files
+
+# Examples of what to KEEP:
+# !.gitkeep
+# !README.md
+# !.env.example
+# !data/example.csv
+# !docs/*.md

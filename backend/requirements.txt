@@ -1,0 +1,25 @@
+# Automated Assay Analysis & Visualization - Python Dependencies
+
+# Web Framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# Data Processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Bioinformatics & Analysis
+scikit-learn==1.3.2
+scipy==1.11.4
+
+# Optional: Enhanced Data Processing
+openpyxl==3.1.2  # For Excel file support
+xlrd==2.0.1      # For older Excel formats
+
+# Development
+pytest==7.4.3
+pytest-cov==4.1.0
+
+# Production Server (optional)
+gunicorn==21.2.0
+waitress==2.1.2
