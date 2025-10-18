@@ -1,5 +1,4 @@
 # Automated Assay Analysis - Backend Dockerfile
-
 FROM python:3.11-slim
 
 # Set working directory
@@ -24,13 +23,11 @@ COPY *.py .
 # Create directory for uploads
 RUN mkdir -p /app/uploads
 
-# Expose port
-EXPOSE 5000
-
 # Set environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
-# Run with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+# Railway provides PORT environment variable
+# Use shell form to allow environment variable expansion
+CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 app:app
