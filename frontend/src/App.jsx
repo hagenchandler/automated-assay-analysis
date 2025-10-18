@@ -3,7 +3,7 @@ import { Upload, Download, RefreshCw, Settings, BarChart3, AlertCircle, CheckCir
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // API Base URL - using direct URL since process.env isn't available in artifacts
-const API_URL = 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const AutomatedAssayAnalysis = () => {
   const [file, setFile] = useState(null);
