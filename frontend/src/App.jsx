@@ -12,6 +12,7 @@ const AutomatedAssayAnalysis = () => {
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
   const [apiStatus, setApiStatus] = useState('checking');
+  const [sessionId, setSessionId] = useState(null);
   const [config, setConfig] = useState({
     normalization: 'zscore',
     pca_components: 2,
@@ -59,10 +60,10 @@ const AutomatedAssayAnalysis = () => {
       setError('Please upload a data file first');
       return;
     }
-
+  
     setLoading(true);
     setError(null);
-
+  
     try {
       // Step 1: Upload files
       const formData = new FormData();
@@ -70,40 +71,44 @@ const AutomatedAssayAnalysis = () => {
       if (labelsFile) {
         formData.append('labels_file', labelsFile);
       }
-
+  
       const uploadResponse = await fetch(`${API_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
-
+  
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json();
         throw new Error(errorData.error || 'Upload failed');
       }
-
+  
       const uploadResult = await uploadResponse.json();
       console.log('Upload successful:', uploadResult);
-
-      // Step 2: Run analysis
+      
+      // IMPORTANT: Store the session_id
+      const newSessionId = uploadResult.session_id;
+      setSessionId(newSessionId);
+  
+      // Step 2: Run analysis with session_id
       const analysisResponse = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(config),
+        body: JSON.stringify({
+          ...config,
+          session_id: newSessionId  // Include session_id
+        }),
       });
-
+  
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json();
         throw new Error(errorData.error || 'Analysis failed');
       }
-
+  
       const analysisResult = await analysisResponse.json();
       console.log('Analysis complete:', analysisResult);
-      console.log('PCA data:', analysisResult.results?.pca_data);
-      console.log('Data length:', analysisResult.results?.pca_data?.length);
-      console.log('Sample point:', analysisResult.results?.pca_data?.[0]);
-
+  
       setAnalysisData(analysisResult.results);
       setActiveTab('results');
     } catch (err) {
@@ -112,11 +117,7 @@ const AutomatedAssayAnalysis = () => {
     } finally {
       setLoading(false);
     }
-
-
-
   };
-
 
   const handleExport = async () => {
     try {
