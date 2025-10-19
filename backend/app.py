@@ -7,19 +7,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.decomposition import PCA
 import io
 import time
+import uuid
 from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-
-@app.route('/test', methods=['GET'])
-def test():
-    return jsonify({'status': 'test route works'})
+# In-memory session storage (replace with Redis for production)
+analysis_sessions = {}
 
 
 class BioinformaticsAnalysisService:
@@ -35,35 +34,17 @@ class BioinformaticsAnalysisService:
     def load_data(self, file_stream):
         """Load and validate gene expression CSV data"""
         try:
-            # Read CSV file - first column is row names (sample IDs or gene IDs)
+            # Read CSV file
             self.data = pd.read_csv(file_stream, index_col=0)
-
-            # Check if we have any non-numeric data
-            # If first row contains gene names, set it as header
-            if self.data.select_dtypes(include=['object']).shape[1] > 0:
-                print("Detected non-numeric data, treating first row as header")
-                # Reset and re-read with first row as header
-                file_stream.seek(0)  # Go back to start of file
-                self.data = pd.read_csv(file_stream, index_col=0, header=0)
-
-            # Convert all data to numeric, coercing errors
-            self.data = self.data.apply(pd.to_numeric, errors='coerce')
-
-            # Drop any rows/columns that are all NaN
-            self.data = self.data.dropna(
-                how='all', axis=0).dropna(how='all', axis=1)
 
             # Transpose if needed (genes should be columns, samples as rows)
             if self.data.shape[0] > self.data.shape[1]:
                 self.data = self.data.T
 
-            print(f"Loaded data: {self.data.shape[0]} samples × {
-                self.data.shape[1]} genes")
+            print(f"Loaded data: {self.data.shape[0]} samples x {self.data.shape[1]} genes")
             return True
         except Exception as e:
             print(f"Error loading data: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
             return False
 
     def load_labels(self, file_stream):
@@ -99,39 +80,30 @@ class BioinformaticsAnalysisService:
 
         elif method == 'log2':
             # Add small constant to avoid log(0)
-            # Also handle negative values by taking absolute value
             data_positive = self.data.abs() + 1
             self.normalized_data = np.log2(data_positive)
-            print(f"Log2 transformation applied. Range: {
-                  self.normalized_data.min().min():.2f} to {self.normalized_data.max().max():.2f}")
+            min_val = self.normalized_data.min().min()
+            max_val = self.normalized_data.max().max()
+            print(f"Log2 transformation applied. Range: {min_val:.2f} to {max_val:.2f}")
 
         elif method == 'quantile':
             try:
-                # Quantile normalization - more robust implementation
-                # Sort each column and replace with mean of sorted values
+                # Quantile normalization
                 df_sorted = pd.DataFrame(
                     np.sort(self.data.values, axis=0),
                     index=self.data.index,
                     columns=self.data.columns
                 )
-
-                # Calculate mean of each row (across sorted samples)
+                
                 rank_mean = df_sorted.mean(axis=1)
-
-                # Get ranks for each value
                 ranks = self.data.rank(method='average', axis=0)
-
-                # Map ranks to mean values
-                self.normalized_data = ranks.apply(
-                    lambda x: rank_mean[x.astype(int) - 1], axis=0)
-
-                print(
-                    f"Quantile normalization applied. All samples now have identical distributions.")
-
+                self.normalized_data = ranks.apply(lambda x: rank_mean[x.astype(int) - 1], axis=0)
+                
+                print("Quantile normalization applied. All samples now have identical distributions.")
+                
             except Exception as e:
                 print(f"Quantile normalization failed: {str(e)}")
                 print("Falling back to z-score normalization")
-                # Fallback to z-score if quantile fails
                 scaler = StandardScaler()
                 self.normalized_data = pd.DataFrame(
                     scaler.fit_transform(self.data),
@@ -140,8 +112,6 @@ class BioinformaticsAnalysisService:
                 )
 
         elif method == 'robust':
-            # Robust scaling using median and IQR
-            from sklearn.preprocessing import RobustScaler
             scaler = RobustScaler()
             self.normalized_data = pd.DataFrame(
                 scaler.fit_transform(self.data),
@@ -151,14 +121,13 @@ class BioinformaticsAnalysisService:
 
         print(f"Applied {method} normalization")
         print(f"Normalized data shape: {self.normalized_data.shape}")
-        print(f"NaN values: {self.normalized_data.isna().sum().sum()}")
-
+        nan_count = self.normalized_data.isna().sum().sum()
+        print(f"NaN values: {nan_count}")
+        
         # Replace any NaN or infinite values
-        self.normalized_data = self.normalized_data.replace(
-            [np.inf, -np.inf], np.nan)
-        self.normalized_data = self.normalized_data.fillna(
-            self.normalized_data.mean())
-
+        self.normalized_data = self.normalized_data.replace([np.inf, -np.inf], np.nan)
+        self.normalized_data = self.normalized_data.fillna(self.normalized_data.mean())
+        
         return self.normalized_data
 
     def apply_pca(self, n_components=2, variance_threshold=0.01):
@@ -190,8 +159,7 @@ class BioinformaticsAnalysisService:
         )
 
         print(f"PCA complete: {n_components} components")
-        print(f"Explained variance ratio: {
-              self.pca_model.explained_variance_ratio_}")
+        print(f"Explained variance ratio: {self.pca_model.explained_variance_ratio_}")
 
         return self.pca_results
 
@@ -225,11 +193,9 @@ class BioinformaticsAnalysisService:
                 sample_data['type'] = str(self.labels.loc[idx, label_col])
 
             # Add sample statistics
-            sample_data['genes_expressed'] = int(
-                (self.data.loc[idx] > 0).sum())
+            sample_data['genes_expressed'] = int((self.data.loc[idx] > 0).sum())
             sample_data['mean_expression'] = float(self.data.loc[idx].mean())
-            sample_data['quality_score'] = float(
-                np.random.uniform(80, 95))  # Placeholder
+            sample_data['quality_score'] = float(np.random.uniform(80, 95))
 
             results['pca_data'].append(sample_data)
 
@@ -244,10 +210,6 @@ class BioinformaticsAnalysisService:
             }
 
         return results
-
-
-# Global analysis service instance
-analysis_service = BioinformaticsAnalysisService()
 
 
 @app.route('/api/health', methods=['GET'])
@@ -265,6 +227,7 @@ def upload_data():
     """
     Upload gene expression CSV file
     Accepts multipart form data with 'data_file' and optional 'labels_file'
+    Returns a session_id to use for analysis
     """
     try:
         # Check if data file is present
@@ -276,6 +239,10 @@ def upload_data():
         if data_file.filename == '':
             return jsonify({'error': 'Empty filename'}), 400
 
+        # Create new session
+        session_id = str(uuid.uuid4())
+        analysis_service = BioinformaticsAnalysisService()
+        
         # Load data
         start_time = time.time()
         success = analysis_service.load_data(data_file.stream)
@@ -288,11 +255,15 @@ def upload_data():
             labels_file = request.files['labels_file']
             analysis_service.load_labels(labels_file.stream)
 
+        # Store in session
+        analysis_sessions[session_id] = analysis_service
+        
         load_time = time.time() - start_time
 
         return jsonify({
             'status': 'success',
             'message': 'Data uploaded successfully',
+            'session_id': session_id,
             'data_shape': {
                 'samples': analysis_service.data.shape[0],
                 'genes': analysis_service.data.shape[1]
@@ -301,13 +272,82 @@ def upload_data():
         })
 
     except Exception as e:
+        print(f"Upload error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_data():
+    """
+    Run complete analysis pipeline: normalization + PCA
+    
+    Request body:
+    {
+        "session_id": "uuid-from-upload",
+        "normalization": "zscore",
+        "pca_components": 2,
+        "variance_threshold": 0.01
+    }
+    """
+    try:
+        config = request.get_json() or {}
+        session_id = config.get('session_id')
+        
+        if not session_id:
+            return jsonify({'error': 'No session_id provided'}), 400
+        
+        if session_id not in analysis_sessions:
+            return jsonify({'error': 'No data uploaded or session expired'}), 400
+        
+        analysis_service = analysis_sessions[session_id]
+        
+        normalization = config.get('normalization', 'zscore')
+        pca_components = config.get('pca_components', 2)
+        variance_threshold = config.get('variance_threshold', 0.01)
+
+        start_time = time.time()
+
+        # Step 1: Normalize data
+        analysis_service.normalize_data(method=normalization)
+
+        # Step 2: Apply PCA
+        analysis_service.apply_pca(
+            n_components=pca_components,
+            variance_threshold=variance_threshold
+        )
+
+        # Step 3: Compile results
+        results = analysis_service.get_analysis_results()
+
+        processing_time = time.time() - start_time
+        results['stats']['processing_time'] = f"{processing_time:.1f}s"
+        results['stats']['normalization_method'] = normalization
+
+        return jsonify({
+            'status': 'success',
+            'results': results
+        })
+
+    except Exception as e:
+        print(f"Analysis error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/export', methods=['GET'])
 def export_results():
-    """Export PCA results as CSV"""
+    """Export PCA results as CSV - requires session_id as query param"""
     try:
+        session_id = request.args.get('session_id')
+        
+        if not session_id or session_id not in analysis_sessions:
+            return jsonify({'error': 'No analysis results available'}), 400
+        
+        analysis_service = analysis_sessions[session_id]
+        
         if analysis_service.pca_results is None:
             return jsonify({'error': 'No analysis results available'}), 400
 
@@ -329,14 +369,10 @@ def get_config():
     """Get available configuration options"""
     return jsonify({
         'normalization_methods': [
-            {'value': 'zscore', 'label': 'Z-Score Normalization',
-                'description': 'Standardizes to mean=0, std=1'},
-            {'value': 'log2', 'label': 'Log2 Transformation',
-                'description': 'Logarithmic scaling'},
-            {'value': 'quantile', 'label': 'Quantile Normalization',
-                'description': 'Makes distributions identical'},
-            {'value': 'robust', 'label': 'Robust Scaling',
-                'description': 'Uses median and IQR'}
+            {'value': 'zscore', 'label': 'Z-Score Normalization', 'description': 'Standardizes to mean=0, std=1'},
+            {'value': 'log2', 'label': 'Log2 Transformation', 'description': 'Logarithmic scaling'},
+            {'value': 'quantile', 'label': 'Quantile Normalization', 'description': 'Makes distributions identical'},
+            {'value': 'robust', 'label': 'Robust Scaling', 'description': 'Uses median and IQR'}
         ],
         'pca_components': {
             'min': 2,
@@ -368,73 +404,9 @@ def list_routes():
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods',
-                         'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
-
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze_data():
-    """
-    Run complete analysis pipeline: normalization + PCA
-
-    Request body:
-    {
-        "normalization": "zscore",  // zscore, log2, quantile, robust
-        "pca_components": 2,
-        "variance_threshold": 0.01
-    }
-    """
-    try:
-        if analysis_service.data is None:
-            return jsonify({'error': 'No data uploaded'}), 400
-
-        # Get configuration from request
-        config = request.get_json() or {}
-        normalization = config.get('normalization', 'zscore')
-        pca_components = config.get('pca_components', 2)
-        variance_threshold = config.get('variance_threshold', 0.01)
-
-        start_time = time.time()
-
-        print(f"Starting analysis with config: {config}")
-
-        # Step 1: Normalize data
-        analysis_service.normalize_data(method=normalization)
-        print("Normalization complete")
-
-        # Step 2: Apply PCA
-        analysis_service.apply_pca(
-            n_components=pca_components,
-            variance_threshold=variance_threshold
-        )
-
-        print("PCA complete")
-
-        # Step 3: Compile results
-        results = analysis_service.get_analysis_results()
-        print("results compiled")
-
-        processing_time = time.time() - start_time
-        results['stats']['processing_time'] = f"{processing_time:.1f}s"
-        results['stats']['normalization_method'] = normalization
-
-        # Right before the return statement in analyze_data():
-        print(f"Returning {len(results['pca_data'])} data points")
-        print(f"Sample data point: {
-              results['pca_data'][0] if results['pca_data'] else 'None'}")
-        return jsonify({
-            'status': 'success',
-            'results': results
-        })
-
-    except Exception as e:
-        import traceback
-        print("ERROR in analyze_data:")
-        print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
